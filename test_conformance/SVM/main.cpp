@@ -269,6 +269,7 @@ test_definition test_list[] = {
     ADD_TEST( svm_shared_sub_buffers ),
     ADD_TEST( svm_shared_address_space_fine_grain_buffers ),
     ADD_TEST( svm_allocate_shared_buffer ),
+    ADD_TEST( svm_allocate_shared_buffer_negative ),
     ADD_TEST( svm_shared_address_space_coarse_grain_old_api ),
     ADD_TEST( svm_shared_address_space_coarse_grain_new_api ),
     ADD_TEST( svm_cross_buffer_pointers_coarse_grain ),

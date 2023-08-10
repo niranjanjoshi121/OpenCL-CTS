@@ -15,7 +15,7 @@
 //
 #include "common.h"
 
-const cl_mem_flags flag_set[] = {
+const cl_mem_flags svm_flag_set[] = {
   CL_MEM_READ_WRITE,
   CL_MEM_WRITE_ONLY,
   CL_MEM_READ_ONLY,
@@ -27,7 +27,7 @@ const cl_mem_flags flag_set[] = {
   CL_MEM_READ_ONLY | CL_MEM_SVM_FINE_GRAIN_BUFFER | CL_MEM_SVM_ATOMICS,
   0
 };
-const char* flag_set_names[] = {
+const char* svm_flag_set_names[] = {
   "CL_MEM_READ_WRITE",
   "CL_MEM_WRITE_ONLY",
   "CL_MEM_READ_ONLY",
@@ -41,7 +41,7 @@ const char* flag_set_names[] = {
 };
 
 
-int test_svm_allocate_shared_buffer(cl_device_id deviceID, cl_context context2, cl_command_queue queue, int num_elements)
+int test_svm_allocate_shared_buffer_negative(cl_device_id deviceID, cl_context context2, cl_command_queue queue, int num_elements)
 {
   clContextWrapper    context = NULL;
   clProgramWrapper    program = NULL;
@@ -60,18 +60,18 @@ int test_svm_allocate_shared_buffer(cl_device_id deviceID, cl_context context2, 
   size_t size = 1024;
 
   // iteration over flag combos
-  int num_flags = sizeof(flag_set)/sizeof(cl_mem_flags);
+  int num_flags = sizeof(svm_flag_set)/sizeof(cl_mem_flags);
   for(int i = 0; i < num_flags; i++)
   {
-    if (((flag_set[i] & CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0 && (caps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) == 0)
-        || ((flag_set[i] & CL_MEM_SVM_ATOMICS) != 0 && (caps & CL_DEVICE_SVM_ATOMICS) == 0))
+    if (((svm_flag_set[i] & CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0 && (caps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) == 0)
+        || ((svm_flag_set[i] & CL_MEM_SVM_ATOMICS) != 0 && (caps & CL_DEVICE_SVM_ATOMICS) == 0))
     {
-      log_info("Skipping clSVMalloc with flags: %s\n", flag_set_names[i]);
+      log_info("Skipping clSVMalloc with flags: %s\n", svm_flag_set_names[i]);
       continue;
     }
 
-    log_info("Testing clSVMalloc with flags: %s\n", flag_set_names[i]);
-    cl_char *pBufData1 = (cl_char*) clSVMAlloc(context, flag_set[i], size, 0);
+    log_info("Testing clSVMalloc with flags: %s\n", svm_flag_set_names[i]);
+    cl_char *pBufData1 = (cl_char*) clSVMAlloc(context, svm_flag_set[i], size, 0);
     if(pBufData1 == NULL)
     {
       log_error("SVMalloc returned NULL");
@@ -80,37 +80,7 @@ int test_svm_allocate_shared_buffer(cl_device_id deviceID, cl_context context2, 
 
     {
       clMemWrapper buf1 = clCreateBuffer(context, CL_MEM_USE_HOST_PTR, 2*size, pBufData1, &err);
-      /*if (err == CL_INVALID_BUFFER_SIZE)
-      {
-          err = CL_SUCCESS;
-      }
-      test_error(err,"clCreateBuffer did not return expected error CL_INVALID_BUFFER_SIZE. Instead returned");
-      */
       test_failure_error(err, CL_INVALID_BUFFER_SIZE, "clCreateBuffer did not return expected error CL_INVALID_BUFFER_SIZE");
-
-      clMemWrapper buf = clCreateBuffer(context, CL_MEM_USE_HOST_PTR, size, pBufData1, &err);
-      test_error(err,"clCreateBuffer failed");
-
-      cl_char *pBufData2 = NULL;
-      cl_uint flags = CL_MAP_READ | CL_MAP_READ;
-      if(flag_set[i] & CL_MEM_HOST_READ_ONLY) flags ^= CL_MAP_WRITE;
-      if(flag_set[i] & CL_MEM_HOST_WRITE_ONLY) flags ^= CL_MAP_READ;
-
-      if(!(flag_set[i] & CL_MEM_HOST_NO_ACCESS))
-      {
-        pBufData2 = (cl_char*) clEnqueueMapBuffer(queues[0], buf, CL_TRUE, flags, 0, size, 0, NULL,NULL, &err);
-        test_error(err, "clEnqueueMapBuffer failed");
-
-        if(pBufData2 != pBufData1 || NULL == pBufData1)
-        {
-          log_error("SVM pointer returned by clEnqueueMapBuffer doesn't match pointer returned by clSVMalloc");
-          return -1;
-        }
-        err = clEnqueueUnmapMemObject(queues[0], buf, pBufData2, 0, NULL, NULL);
-        test_error(err, "clEnqueueUnmapMemObject failed");
-        err = clFinish(queues[0]);
-        test_error(err, "clFinish failed");
-      }
     }
 
     clSVMFree(context, pBufData1);
